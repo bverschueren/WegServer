@@ -7,11 +7,13 @@
 #include <linux/device.h>
 #include <linux/cdev.h>
 #include <linux/uaccess.h>
+#include <linux/slab.h>
+#include <linux/string.h>
 
 static dev_t first;
 static struct cdev c_dev;
 static struct class *cl;
-static int seq = 0;
+static unsigned int seq = 0;
 
 static int ns_open(struct inode *i, struct file *f){
 	printk(KERN_INFO "ns_open()\n");
@@ -24,20 +26,23 @@ static int ns_close(struct inode *i, struct file *f){
 }
 
 static ssize_t ns_read(struct file *f, char __user *buf, size_t len, loff_t *off){
-	printk(KERN_INFO "ns_read(): %d\n", seq);
-	if (*off == 0){
-		if (copy_to_user(buf, &seq, 1) != 0){
+	printk(KERN_INFO "ns_read()\n");
+	char *out = (char *) kmalloc(10, GFP_KERNEL);
+	if (*off < sizeof(*out)){
+		char *out = (char *) kmalloc(10, GFP_KERNEL); */
+		snprintf(out, sizeof(seq), "%d", seq);
+		if(copy_to_user(buf, out, sizeof(out)) != 0)
+		{
 			return -EFAULT;
-		}	
+		}
 		else{
 			(*off)++;
-			(seq)++;
-			printk(KERN_INFO "buf: %s", &buf);
-			return 1;
+			seq++;
+			printk(KERN_INFO "strlen(out)=%d", strlen(out)); 
+			return strlen(out);
 		}
 	}
 	else{
-		(seq)++;
 		return 0;
 	}
 }
